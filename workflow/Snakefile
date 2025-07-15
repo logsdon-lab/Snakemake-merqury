@@ -1,0 +1,137 @@
+import os
+import re
+import hashlib
+from os.path import join, abspath, dirname
+from collections import defaultdict
+from typing import Iterator
+
+
+OUTPUT_DIR = config.get("output_dir", "results")
+LOG_DIR = config.get("log_dir", "logs")
+BENCHMARK_DIR = config.get("benchmark_dir", "benchmarks")
+
+
+def get_dir_files(
+    dirname: str, rgx: str, depth: int | None = None
+) -> Iterator[str]:
+    path_pattern = re.compile(rgx)
+    for i, (root, read_dirs, fnames) in enumerate(os.walk(dirname), 1):
+        for file in fnames:
+            read_dir_path = abspath(join(root, file))
+            if not re.search(path_pattern, file):
+                continue
+
+            yield read_dir_path
+
+        if i == depth:
+            break
+
+def get_sample_data() -> defaultdict[str, defaultdict[str, dict[str, str]]]:
+    samples = defaultdict(lambda: defaultdict(dict))
+    for sm, cfg in config["samples"].items():
+        if cfg.get("asm_dir") and cfg.get("asm_rgx"):
+            asm_files = list(get_dir_files(cfg["asm_dir"], cfg["asm_rgx"]))
+        elif cfg.get("asm_fofn"):
+            with open(cfg["asm_fofn"]) as fh:
+                asm_files = [line.strip() for line in fh]
+        else:
+            asm_files = cfg["asm"]
+
+        for asm in asm_files:
+            asm_file_hash = hashlib.sha256(asm.encode()).hexdigest()
+            samples[sm]["asm"][asm_file_hash] = asm
+
+        if cfg.get("read_dir") and cfg.get("read_rgx"):
+            read_files = list(get_dir_files(cfg["read_dir"], cfg["read_rgx"]))
+        elif cfg.get("read_fofn"):
+            with open(cfg["read_fofn"]) as fh:
+                read_files = [line.strip() for line in fh]
+        else:
+            read_files = cfg["reads"]
+
+        for read_file in read_files:
+            read_file_hash = hashlib.sha256(read_file.encode()).hexdigest()
+            samples[sm]["reads"][read_file_hash] = read_file
+
+    return samples
+
+
+SAMPLES = get_sample_data()
+READ_HASHES = [read_hash for sm, cfg in SAMPLES.items() for read_hash, _ in cfg["reads"].items()]
+
+
+wildcard_constraints:
+    sm="|".join(SAMPLES.keys()),
+    read_hash="|".join(READ_HASHES),
+
+
+rule count_kmers:
+    input:
+        lambda wc: SAMPLES[wc.sm]["reads"][wc.read_hash]
+    output:
+        directory(join(OUTPUT_DIR, "{sm}", "{read_hash}.meryl"))
+    log:
+        join(LOG_DIR, "{sm}", "{read_hash}_count.log")
+    benchmark:
+        join(BENCHMARK_DIR, "{sm}", "{read_hash}_count.txt")
+    threads:
+        config["threads"]
+    params:
+        kmer_size=21,
+        mem=config["mem"]
+    resources:
+        mem=f'{config["mem"]}GB'
+    conda:
+        "envs/tools.yaml"
+    shell:
+        """
+        meryl k={params.kmer_size} count threads={threads} memory={params.mem} {input} output {output} &> {log}
+        """
+
+
+rule merge_dbs:
+    input:
+        dbs=lambda wc: expand(rules.count_kmers.output, sm=wc.sm, read_hash=SAMPLES[wc.sm]["reads"].keys())
+    output:
+        db=directory(join(OUTPUT_DIR, "{sm}", "all.meryl"))
+    log:
+        join(LOG_DIR, "{sm}", "merge.log")
+    benchmark:
+        join(BENCHMARK_DIR, "{sm}", "merge.txt")
+    resources:
+        mem=f'{config["mem"]}GB'
+    conda:
+        "envs/tools.yaml"
+    shell:
+        """
+        meryl union-sum {input.dbs} output {output.db} &> {log}
+        """
+
+
+rule estimate_qv:
+    input:
+        db=rules.merge_dbs.output,
+        asm=lambda wc: SAMPLES[wc.sm]["asm"].values(),
+    output:
+        png=join(OUTPUT_DIR, "{sm}", "{sm}.qv")
+    benchmark:
+        join(BENCHMARK_DIR, "{sm}", "qv.txt")
+    log:
+        join(LOG_DIR, "{sm}", "qv.log")
+    params:
+        output_dir=lambda wc, output: dirname(output[0])
+    conda:
+        "envs/tools.yaml"
+    shell:
+        """
+        pushd {params.output_dir}
+        merqury.sh {input.db} {input.asm} {wildcards.sm} &> {log}
+        popd
+        """
+
+
+rule all:
+    input:
+        expand(rules.estimate_qv.output, sm=SAMPLES.keys())
+    default_target:
+        True

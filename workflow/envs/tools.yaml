@@ -3,3 +3,4 @@ channels:
   - bioconda
 dependencies:
   - merqury==1.3
+  - seqtk==1.5

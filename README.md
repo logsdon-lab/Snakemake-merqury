@@ -51,5 +51,14 @@ samples:
     reads: ["data/reads.fastq.gz"]
 ```
 
+Optionally, a BED file can be provided to calculate QV per region.
+```yaml
+samples:
+  sample_name:
+    asm: ["data/asm.fa"]
+    reads: ["data/reads.fastq.gz"]
+    bed: "regions.bed"
+```
+
 ## Outputs
 See `merqury` [documentation](https://github.com/marbl/merqury?tab=readme-ov-file#outputs-from-each-modules) for more information.

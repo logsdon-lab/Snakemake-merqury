@@ -113,7 +113,7 @@ rule merge_dbs:
 rule merge_seq:
     input:
         asm=lambda wc: SAMPLES[wc.sm]["asm"].values(),
-        bed=SAMPLES[wc.sm].get("bed", [])
+        bed=lambda wc: SAMPLES[wc.sm].get("bed", [])
     output:
         temp(join(OUTPUT_DIR, "{sm}", "{sm}_merged.fasta")),
     params:

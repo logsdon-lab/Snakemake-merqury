@@ -96,7 +96,7 @@ rule merge_dbs:
     input:
         dbs=lambda wc: expand(rules.count_kmers.output, sm=wc.sm, read_hash=SAMPLES[wc.sm]["reads"].keys())
     output:
-        db=directory(join(OUTPUT_DIR, "{sm}", "all.meryl"))
+        db=directory(abspath(join(OUTPUT_DIR, "{sm}", "all.meryl")))
     log:
         join(LOG_DIR, "{sm}", "merge.log")
     benchmark:
@@ -115,7 +115,7 @@ rule merge_seq:
         asm=lambda wc: SAMPLES[wc.sm]["asm"].values(),
         bed=lambda wc: SAMPLES[wc.sm].get("bed", [])
     output:
-        temp(join(OUTPUT_DIR, "{sm}", "{sm}_merged.fasta")),
+        temp(abspath(join(OUTPUT_DIR, "{sm}", "{sm}_merged.fasta"))),
     params:
         cmd_extract_bed=lambda wc, input: f"| seqtk subseq - {input.bed}" if input.bed else ""
     conda:
@@ -131,7 +131,7 @@ def merged_seq(wc):
     if bed or len(seqs) > 2:
         return rules.merge_seq.output
     else:
-        return SAMPLES[wc.sm]["asm"].values()
+        return [abspath(p) for p in SAMPLES[wc.sm]["asm"].values()]
 
 
 rule estimate_qv:

@@ -9,6 +9,7 @@ from typing import Iterator
 OUTPUT_DIR = config.get("output_dir", "results")
 LOG_DIR = config.get("log_dir", "logs")
 BENCHMARK_DIR = config.get("benchmark_dir", "benchmarks")
+KMER_SIZE = config.get("kmer_size", 31)
 
 
 def get_dir_files(
@@ -80,7 +81,7 @@ rule count_kmers:
     threads:
         config["threads"]
     params:
-        kmer_size=21,
+        kmer_size=KMER_SIZE,
         mem=config["mem"]
     resources:
         mem=f'{config["mem"]}GB'

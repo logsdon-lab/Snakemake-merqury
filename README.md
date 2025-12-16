@@ -20,6 +20,8 @@ log_dir: "logs"
 benchmark_dir: "benchmarks"
 threads: 12
 mem: 20
+# https://github.com/marbl/merqury/wiki/1.-Prepare-meryl-dbs
+kmer_size: 31
 ```
 
 ## Data

@@ -9,7 +9,7 @@ cd Snakemake-merqury
 
 ## Usage
 ```bash
-snakemake -np --configfile config.yaml -c 1 --sdm conda
+snakemake -np --configfile config/config.yaml -c 1 --sdm conda
 ```
 
 ## Config
@@ -64,3 +64,9 @@ samples:
 
 ## Outputs
 See `merqury` [documentation](https://github.com/marbl/merqury?tab=readme-ov-file#outputs-from-each-modules) for more information.
+
+## Test
+Workflow dry-run:
+```bash
+snakemake -np --configfile test/input/config.yaml
+```

@@ -1,0 +1,17 @@
+output_dir: "results"
+log_dir: "logs"
+benchmark_dir: "benchmarks"
+threads: 12
+mem: 20
+samples:
+  test_rgx:
+    asm_dir: "test/input"
+    asm_rgx: ".*\\.fa$"
+    read_dir: "test/input"
+    read_rgx: ".*fastq\\.gz$"
+  test_fofn:
+    asm_fofn: "test/input/asm.fofn"
+    read_fofn: "test/input/reads.fofn"
+  test_path:
+    asm: ["test/input/test.fa"]
+    reads: ["test/input/test.fastq.gz"]

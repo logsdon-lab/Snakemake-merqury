@@ -74,7 +74,7 @@ rule count_kmers:
     input:
         lambda wc: SAMPLES[wc.sm]["reads"][wc.read_hash]
     output:
-        directory(join(OUTPUT_DIR, "{sm}", "{read_hash}.meryl"))
+        temp(directory(join(OUTPUT_DIR, "{sm}", "{read_hash}.meryl")))
     log:
         join(LOG_DIR, "{sm}", "{read_hash}_count.log")
     benchmark:
@@ -98,7 +98,7 @@ rule merge_dbs:
     input:
         dbs=lambda wc: expand(rules.count_kmers.output, sm=wc.sm, read_hash=SAMPLES[wc.sm]["reads"].keys())
     output:
-        db=directory(abspath(join(OUTPUT_DIR, "{sm}", "all.meryl")))
+        db=temp(directory(abspath(join(OUTPUT_DIR, "{sm}", "all.meryl"))))
     log:
         join(LOG_DIR, "{sm}", "merge.log")
     benchmark:
